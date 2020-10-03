@@ -7,19 +7,15 @@ use aes::Aes128;
 use base64::decode;
 use miniserde::json;
 use rayon::prelude::*;
-use block_modes::{
-    Ecb,
-    BlockMode,
-    block_padding::Pkcs7,
-};
+use block_modes::{Ecb, BlockMode, block_padding::Pkcs7};
 
-use std:: {
+use std::{
     fs::metadata,
-    io, str, fmt, env,
-    error, path::PathBuf,
-    fs::{ File, OpenOptions },
-    io::SeekFrom::{ Current, Start },
-    io::prelude::{ Read, Seek, Write },
+    io, str, fmt, env, error,
+    path::PathBuf,
+    fs::{File, OpenOptions},
+    io::SeekFrom::{Current, Start},
+    io::prelude::{Read, Seek, Write},
 };
 
 
@@ -27,15 +23,11 @@ use std:: {
 // CTENFDAM
 const MAGIC_HEADER: [u8; 8] = [0x43, 0x54, 0x45, 0x4e, 0x46, 0x44, 0x41, 0x4d];
 
-const CORE_KEY: [u8; 16] = [
-    0x68, 0x7A, 0x48, 0x52, 0x41, 0x6D, 0x73, 0x6F,
-    0x35, 0x6B, 0x49, 0x6E, 0x62, 0x61, 0x78, 0x57,
-];
+const CORE_KEY: [u8; 16] =
+    [0x68, 0x7A, 0x48, 0x52, 0x41, 0x6D, 0x73, 0x6F, 0x35, 0x6B, 0x49, 0x6E, 0x62, 0x61, 0x78, 0x57];
 
-const META_KEY: [u8; 16] = [
-    0x23, 0x31, 0x34, 0x6C, 0x6A, 0x6B, 0x5F, 0x21,
-    0x5C, 0x5D, 0x26, 0x30, 0x55, 0x3C, 0x27, 0x28,
-];
+const META_KEY: [u8; 16] =
+    [0x23, 0x31, 0x34, 0x6C, 0x6A, 0x6B, 0x5F, 0x21, 0x5C, 0x5D, 0x26, 0x30, 0x55, 0x3C, 0x27, 0x28];
 
 const BUFFER_SIZE: usize = 0x8000;
 
@@ -44,43 +36,36 @@ const BUFFER_SIZE: usize = 0x8000;
 struct SimpleError<'a>(&'a str);
 
 impl<'a> fmt::Display for SimpleError<'a> {
-
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0) }
 }
 
 impl<'a> error::Error for SimpleError<'a> {
-
     fn description(&self) -> &str { self.0 }
 
     fn cause(&self) -> Option<&dyn error::Error> { None }
-
 }
 
-#[derive(Debug, Clone,MiniDeserialize)]
+#[derive(Debug, Clone, MiniDeserialize)]
 struct MusicMeta {
     #[serde(rename = "musicId")]
-    music_id: u32,
+    music_id:   u32,
     #[serde(rename = "musicName")]
     music_name: String,
-    artist: Vec<(String, u32)>,
-    album: String,
+    artist:     Vec<(String, u32)>,
+    album:      String,
     #[serde(rename = "albumPic")]
-    album_pic: String,
-    format: String,
+    album_pic:  String,
+    format:     String,
 }
 
 #[inline]
 fn get_u32(buffer: &[u8]) -> u32 {
     assert!(buffer.len() >= 4);
-    u32::from(buffer[0])
-        | u32::from(buffer[1]) << 8
-        | u32::from(buffer[2]) << 16
-        | u32::from(buffer[3]) << 24
+    u32::from(buffer[0]) | u32::from(buffer[1]) << 8 | u32::from(buffer[2]) << 16 | u32::from(buffer[3]) << 24
 }
 
 #[inline]
 fn convert(file_path: PathBuf) -> Result<PathBuf, Box<dyn error::Error>> {
-
     let mut input = io::BufReader::new(File::open(&file_path)?);
     let mut buffer = [0; BUFFER_SIZE];
     input.read_exact(&mut buffer[..8])?;
@@ -126,17 +111,16 @@ fn convert(file_path: PathBuf) -> Result<PathBuf, Box<dyn error::Error>> {
             key_box.swap(i, j);
         }
 
-        key_box
-            .iter()
-            .enumerate()
-            .map(|(i, _)| {
-                let i = (i + 1) & 0xff;
-                let si: usize = key_box[i].into();
-                let sj: usize = key_box[(i + si) & 0xff].into();
+        key_box.iter()
+               .enumerate()
+               .map(|(i, _)| {
+                   let i = (i + 1) & 0xff;
+                   let si: usize = key_box[i].into();
+                   let sj: usize = key_box[(i + si) & 0xff].into();
 
-                key_box[(si + sj) & 0xff]
-            })
-            .collect::<Vec<_>>()
+                   key_box[(si + sj) & 0xff]
+               })
+               .collect::<Vec<_>>()
     };
 
     let mut comment_163_key = String::default();
@@ -248,12 +232,7 @@ fn convert(file_path: PathBuf) -> Result<PathBuf, Box<dyn error::Error>> {
 
     // write file
     {
-        let mut output = io::BufWriter::new(
-            OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&target_path)?,
-        );
+        let mut output = io::BufWriter::new(OpenOptions::new().write(true).create_new(true).open(&target_path)?);
 
         loop {
             let read_size = input.read(&mut buffer)?;
@@ -272,10 +251,10 @@ fn convert(file_path: PathBuf) -> Result<PathBuf, Box<dyn error::Error>> {
         let image_mime_type = {
             if let Some(image) = &image {
                 match &image[..8] {
-                    [137, 80, 78, 71, 13, 10, 26, 10] => Some("image/png"),
+                    [137, 80, 78, 71, 13, 10, 26, 10]    => Some("image/png"),
                     [0xFF, 0xD8, 0xFF, 0xE0, _, _, _, _] => Some("image/jpeg"),
-                    [71, 73, 70, _, _, _, _, _] => Some("image/gif"),
-                    _ => None,
+                    [71, 73, 70, _, _, _, _, _]          => Some("image/gif"),
+                    _                                    => None,
                 }
             } else {
                 None
@@ -283,7 +262,6 @@ fn convert(file_path: PathBuf) -> Result<PathBuf, Box<dyn error::Error>> {
         };
 
         match ext_format {
-
             "flac" => {
                 let mut tag = metaflac::Tag::read_from_path(&target_path)?;
                 let vorbis_comment = tag.vorbis_comments_mut();
@@ -291,21 +269,11 @@ fn convert(file_path: PathBuf) -> Result<PathBuf, Box<dyn error::Error>> {
                 if let Some(music_meta) = music_meta {
                     vorbis_comment.set_title(vec![music_meta.music_name]);
                     vorbis_comment.set_album(vec![music_meta.album]);
-                    vorbis_comment.set_artist(
-                        music_meta
-                            .artist
-                            .into_iter()
-                            .map(|ar| ar.0)
-                            .collect::<Vec<_>>(),
-                    );
+                    vorbis_comment.set_artist(music_meta.artist.into_iter().map(|ar| ar.0).collect::<Vec<_>>());
                 }
 
                 if let (Some(image), Some(image_mime_type)) = (image, image_mime_type) {
-                    tag.add_picture(
-                        image_mime_type,
-                        metaflac::block::PictureType::CoverFront,
-                        image,
-                    );
+                    tag.add_picture(image_mime_type, metaflac::block::PictureType::CoverFront, image);
                 }
 
                 tag.save()?;
@@ -316,29 +284,22 @@ fn convert(file_path: PathBuf) -> Result<PathBuf, Box<dyn error::Error>> {
                 if let Some(music_meta) = music_meta {
                     tag.set_title(music_meta.music_name);
                     tag.set_album(music_meta.album);
-                    tag.set_artist(
-                        music_meta
-                            .artist
-                            .into_iter()
-                            .map(|ar| ar.0)
-                            .collect::<Vec<_>>()
-                            .join("/"),
-                    );
+                    tag.set_artist(music_meta.artist
+                                             .into_iter()
+                                             .map(|ar| ar.0)
+                                             .collect::<Vec<_>>()
+                                             .join("/"));
                 }
 
-                tag.add_comment(id3::frame::Comment {
-                    lang: "eng".to_string(),
-                    description: String::default(),
-                    text: comment_163_key.to_string(),
-                });
+                tag.add_comment(id3::frame::Comment { lang:        "eng".to_string(),
+                                                      description: String::default(),
+                                                      text:        comment_163_key.to_string(), });
 
                 if let (Some(image), Some(image_mime_type)) = (image, image_mime_type) {
-                    tag.add_picture(id3::frame::Picture {
-                        mime_type: image_mime_type.to_string(),
-                        picture_type: id3::frame::PictureType::CoverFront,
-                        description: "Cover".to_string(),
-                        data: image,
-                    });
+                    tag.add_picture(id3::frame::Picture { mime_type:    image_mime_type.to_string(),
+                                                          picture_type: id3::frame::PictureType::CoverFront,
+                                                          description:  "Cover".to_string(),
+                                                          data:         image, });
                 }
                 tag.write_to_path(&target_path, id3::Version::Id3v24)?;
             }
@@ -353,16 +314,17 @@ fn convert(file_path: PathBuf) -> Result<PathBuf, Box<dyn error::Error>> {
 pub fn run() -> Result<(), Box<dyn error::Error>> {
     let files_path = &env::args().skip(1).collect::<String>();
 
-    let file_list =
-        match metadata(&files_path)?.is_file() {
-            true => [PathBuf::from(&files_path)].to_vec(),
-            false => {
-                let list = [&files_path, "**", "*.ncm"].iter().collect::<PathBuf>();
-                glob(list.to_str().unwrap())?.filter_map(Result::ok).collect::<Vec<_>>()
-            }
-        };
+    let file_list = match metadata(&files_path)?.is_file() {
+        true => [PathBuf::from(&files_path)].to_vec(),
+        false => {
+            let list = [&files_path, "**", "*.ncm"].iter().collect::<PathBuf>();
+            glob(list.to_str().unwrap())?.filter_map(Result::ok).collect::<Vec<_>>()
+        }
+    };
 
-    file_list.into_par_iter().for_each(|ncm| { convert(ncm).unwrap(); });
+    file_list.into_par_iter().for_each(|ncm| {
+                                 convert(ncm).unwrap();
+                             });
 
     Ok(())
 }

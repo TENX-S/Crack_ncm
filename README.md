@@ -3,8 +3,9 @@
 
 ## Try it!
 
-```shell script
-$ cargo run --release "/absolute/path/to/your/ncm/files/in"
+```shell
+$ git clone https://github.com/TENX-S/Crack_ncm && cd Crack_ncm
+$ cargo run --release /absolute/path/to/your/ncm/files
 ```
 
 
